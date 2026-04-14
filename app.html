@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>喝水提醒</title>
+    <style>
+      :root {
+        --text: #0c2a4d;
+        --muted: rgba(12,42,77,0.6);
+        --primary: #0b6bff;
+        --primary2: #20c6ff;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html {
+        height: 100%;
+        overflow: hidden;
+      }
+      body {
+        height: 100%;
+        width: 100%;
+        font-family: ui-sans-serif, system-ui, -apple-system,
+          "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        color: var(--text);
+        background: linear-gradient(150deg, #eaf5ff 0%, #daeaff 100%);
+        padding: 12px 14px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .cup-icon {
+        font-size: 24px;
+        animation: bob 2.6s ease-in-out infinite;
+        line-height: 1;
+      }
+      @keyframes bob {
+        0%,100% { transform: translateY(0); }
+        50% { transform: translateY(-3px); }
+      }
+      .header-title { font-size: 15px; font-weight: 700; }
+      .header-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+      .card {
+        background: rgba(255,255,255,0.7);
+        border: 1px solid rgba(11,107,255,0.12);
+        border-radius: 14px;
+        padding: 12px 14px 10px;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 6px 24px rgba(12,42,77,0.1);
+        flex-shrink: 0;
+      }
+      .card-label { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
+      .timer {
+        font-size: 46px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        line-height: 1.05;
+        font-variant-numeric: tabular-nums;
+        color: var(--text);
+        transition: color 0.3s;
+      }
+      .timer.paused { color: rgba(12,42,77,0.35); }
+      .next-hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+      .progress-wrap {
+        height: 5px;
+        background: rgba(11,107,255,0.1);
+        border-radius: 99px;
+        margin-top: 8px;
+        overflow: hidden;
+      }
+      .progress-bar {
+        height: 100%;
+        border-radius: 99px;
+        background: linear-gradient(90deg, var(--primary), var(--primary2));
+        transition: width 0.9s ease, opacity 0.3s;
+      }
+      .progress-bar.paused { opacity: 0.3; }
+
+      .switch-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(255,255,255,0.6);
+        border: 1px solid rgba(11,107,255,0.1);
+        border-radius: 11px;
+        padding: 8px 12px;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .switch-item {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        flex: 1;
+      }
+      .switch-item:first-child {
+        border-right: 1px solid rgba(11,107,255,0.1);
+        padding-right: 12px;
+        margin-right: 4px;
+      }
+      .switch-label { font-size: 12px; color: var(--text); white-space: nowrap; }
+      .switch-sub { font-size: 10px; color: var(--muted); }
+
+      .toggle {
+        position: relative;
+        width: 36px;
+        height: 20px;
+        flex-shrink: 0;
+        margin-left: auto;
+      }
+      .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+      .toggle-track {
+        position: absolute;
+        inset: 0;
+        border-radius: 99px;
+        background: rgba(12,42,77,0.18);
+        transition: background 0.25s;
+        cursor: pointer;
+      }
+      .toggle input:checked + .toggle-track { background: var(--primary); }
+      .toggle-thumb {
+        position: absolute;
+        top: 3px; left: 3px;
+        width: 14px; height: 14px;
+        border-radius: 50%;
+        background: white;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        transition: transform 0.25s;
+        pointer-events: none;
+      }
+      .toggle input:checked ~ .toggle-thumb { transform: translateX(16px); }
+
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .row-label { font-size: 11px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+      select {
+        flex: 1;
+        padding: 7px 9px;
+        border-radius: 9px;
+        border: 1px solid rgba(11,107,255,0.16);
+        background: rgba(255,255,255,0.88);
+        color: var(--text);
+        outline: none;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .custom-row {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .custom-row.show { display: flex; }
+      .custom-input {
+        flex: 1;
+        padding: 7px 9px;
+        border-radius: 9px;
+        border: 1px solid rgba(11,107,255,0.16);
+        background: rgba(255,255,255,0.88);
+        color: var(--text);
+        outline: none;
+        font: inherit;
+        font-size: 12px;
+      }
+      .custom-unit {
+        width: 76px;
+        flex: 0 0 auto;
+      }
+      .custom-apply {
+        width: 68px;
+        flex: 0 0 auto;
+        padding: 8px 10px;
+        border-radius: 9px;
+        font-weight: 800;
+        font-size: 12px;
+        background: linear-gradient(135deg, var(--primary), var(--primary2));
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 5px 16px rgba(11,107,255,0.25);
+      }
+
+      .btns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 7px;
+        flex-shrink: 0;
+      }
+      button { font: inherit; border: none; cursor: pointer; border-radius: 11px; padding: 10px 6px; font-weight: 700; font-size: 13px; transition: transform 100ms ease, opacity 100ms ease; }
+      .btn-primary {
+        background: linear-gradient(135deg, var(--primary), var(--primary2));
+        color: #fff;
+        box-shadow: 0 5px 16px rgba(11,107,255,0.3);
+      }
+      .btn-primary:hover  { transform: translateY(-1px); }
+      .btn-primary:active { transform: translateY(1px); }
+      .btn-primary:disabled { opacity: 0.4; cursor: default; transform: none; }
+      .btn-secondary {
+        background: rgba(255,255,255,0.88);
+        color: var(--text);
+        border: 1px solid rgba(11,107,255,0.16);
+        box-shadow: 0 3px 10px rgba(12,42,77,0.07);
+      }
+      .btn-secondary:disabled { opacity: 0.4; cursor: default; }
+
+      .toast {
+        position: fixed;
+        bottom: 10px; left: 50%;
+        transform: translateX(-50%) translateY(12px);
+        opacity: 0;
+        pointer-events: none;
+        background: rgba(12,42,77,0.85);
+        color: #fff;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 11px;
+        transition: opacity 150ms ease, transform 150ms ease;
+        white-space: nowrap;
+        z-index: 999;
+      }
+      .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+  </head>
+  <body>
+
+    <div class="header">
+      <div class="cup-icon">🥤</div>
+      <div>
+        <div class="header-title">记得喝水！</div>
+        <div class="header-sub">保持水分，状态更好。</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">距离下次喝水</div>
+      <div class="timer paused" id="timer">--:--</div>
+      <div class="next-hint" id="nextHint">提醒未开启</div>
+      <div class="progress-wrap">
+        <div class="progress-bar paused" id="progressBar" style="width:100%"></div>
+      </div>
+    </div>
+
+    <div class="switch-row">
+      <div class="switch-item">
+        <div>
+          <div class="switch-label">开始提醒</div>
+          <div class="switch-sub" id="timerStatus">未开启</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="timerToggle" />
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="switch-item">
+        <div>
+          <div class="switch-label">弹出通知</div>
+          <div class="switch-sub" id="notifStatus">未开启</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="notifToggle" />
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="row-label">提醒间隔</span>
+      <select id="intervalSelect">
+        <option value="15">每 15 分钟</option>
+        <option value="30" selected>每 30 分钟</option>
+        <option value="45">每 45 分钟</option>
+        <option value="60">每 60 分钟</option>
+        <option value="custom">自定义…</option>
+      </select>
+    </div>
+
+    <div class="custom-row" id="customRow">
+      <span class="row-label">自定义</span>
+      <input class="custom-input" id="customIntervalValue" type="number" min="1" max="720" step="1" placeholder="输入数值" />
+      <select id="customIntervalUnit" class="custom-unit">
+        <option value="seconds">秒</option>
+        <option value="minutes" selected>分钟</option>
+        <option value="hours">小时</option>
+      </select>
+      <button class="custom-apply" id="customApplyBtn" type="button">应用</button>
+    </div>
+
+    <div class="btns">
+      <button class="btn-primary" id="drinkBtn" type="button" disabled>我喝了！</button>
+      <button class="btn-secondary" id="resetBtn" type="button" disabled>重置倒计时</button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
